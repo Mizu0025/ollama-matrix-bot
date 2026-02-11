@@ -1,4 +1,6 @@
 import simplematrixbotlib as botlib
+import nio
+import httpx
 from config import logger, SYSTEM_INSTRUCTION
 from data_manager import DataManager
 from ollama_client import markdown_to_html, fetch_ollama_models, chat_with_ollama
@@ -12,7 +14,10 @@ def register_handlers(bot):
         logger.info(f"--- Event Received from {message.sender} ---")
         
         # Strict parsing: MUST start with "!" and have NO space after it
-        body = message.body.strip()
+        body = getattr(message, 'body', '').strip()
+        mxc_url = getattr(message, 'url', None)
+        is_image = mxc_url and mxc_url.startswith("mxc://")
+
         if not body.startswith("!") or body.startswith("! "):
             return
             
@@ -75,8 +80,58 @@ def register_handlers(bot):
                 "• `!<prompt>` - Chat with AI\n"
                 "• `!model <name>` - Switch model\n"
                 "• `!models` - List local models\n"
+                "• `!avatar <url>` - Update bot avatar from URL\n"
+                "• `!avatar` (with image upload) - Update bot avatar\n"
                 "• `!clear` - Reset history"
             )
+            return
+
+        if command == "avatar":
+            if is_image:
+                try:
+                    await bot.api.async_client.set_avatar_url(mxc_url)
+                    await send_formatted("✅ Avatar updated successfully from uploaded image!")
+                except Exception as e:
+                    logger.error(f"Failed to set avatar: {e}")
+                    await send_formatted(f"❌ Failed to update avatar: {e}")
+                return
+
+            if len(args) > 1:
+                url = args[1]
+                await send_formatted("⏳ Downloading image...")
+                try:
+                    async with httpx.AsyncClient(timeout=30.0) as client:
+                        resp = await client.get(url, follow_redirects=True)
+                        if resp.status_code != 200:
+                            await send_formatted(f"❌ Failed to download image: HTTP {resp.status_code}")
+                            return
+                        
+                        content_type = resp.headers.get("Content-Type", "")
+                        if not content_type.startswith("image/"):
+                            await send_formatted(f"❌ URL does not point to an image (Content-Type: {content_type})")
+                            return
+                        
+                        image_data = resp.content
+                        if len(image_data) > 10 * 1024 * 1024:  # 10MB limit
+                            await send_formatted("❌ Image is too large (max 10MB)")
+                            return
+
+                        upload_resp = await bot.api.async_client.upload(
+                            image_data, 
+                            content_type=content_type, 
+                            filename="avatar"
+                        )
+                        
+                        if isinstance(upload_resp, nio.UploadResponse):
+                            await bot.api.async_client.set_avatar_url(upload_resp.content_uri)
+                            await send_formatted("✅ Avatar updated successfully from URL!")
+                        else:
+                            await send_formatted(f"❌ Failed to upload image to Matrix.")
+                except Exception as e:
+                    logger.error(f"Error updating avatar: {e}")
+                    await send_formatted(f"❌ Error updating avatar: {str(e)}")
+            else:
+                await send_formatted("❓ Usage: `!avatar <url>` or upload an image with the caption `!avatar`.")
             return
 
         # Standard AI Query
