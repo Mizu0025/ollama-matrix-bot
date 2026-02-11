@@ -1,3 +1,6 @@
 simplematrixbotlib
 httpx
+pytest
+pytest-asyncio
+respx
 # requests # Included just in case you use it elsewhere, though httpx is preferred for async
