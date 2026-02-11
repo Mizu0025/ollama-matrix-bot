@@ -6,7 +6,8 @@ A lightweight, modular Matrix bot that brings local Large Language Models (LLMs)
 
 - **Local LLM Integration**: Interface with any model available in your local Ollama instance.
 - **Persistent Chat History**: Maintains context window for rooms, saved across restarts.
-- **Rich Formatting**: Automatically converts AI Markdown (code blocks, bold, italics) into Matrix-friendly HTML.
+- **Rich Formatting & Splitting**: Converts AI Markdown into Matrix-friendly HTML and automatically splits large responses into chunks to avoid homeserver limits.
+- **Avatar Customization**: Dynamically update the bot's avatar via image upload or web URL triggers.
 - **Multi-room Support**: Independent conversation contexts for every room the bot is in.
 - **Strict Triggers**: Designed to avoid accidental activations (requires fixed `!command` syntax).
 - **Dockerized**: Clean, non-root deployment optimized for Docker Compose.
@@ -68,6 +69,8 @@ The bot uses strict `!command` triggers (no space allowed after the `!`).
 | `!<prompt>` | Ask the AI anything. |
 | `!model <name>`| Switch active model (e.g., `!model llama3`). |
 | `!models` | List all local models available in Ollama. |
+| `!avatar <url>`| Update bot avatar from a direct image link. |
+| `!avatar` (upload) | Set uploaded image as bot avatar (attach with caption `!avatar`). |
 | `!clear` | Wipe conversation history for the current room. |
 | `!help` | Show this help menu. |
 
@@ -79,7 +82,26 @@ The bot uses strict `!command` triggers (no space allowed after the `!`).
 - `handlers.py`: Core logic for Matrix events and command routing.
 - `ollama_client.py`: Ollama API communication and Markdown formatting.
 - `data_manager.py`: Handles state persistence and room context history.
+- `utils.py`: Text utility functions (message splitting, etc).
 - `config.py`: Centralized environment variables and logging.
+- `tests/`: Automated test suite.
+
+---
+
+## 🧪 Testing
+
+The bot includes an automated test suite using `pytest`.
+
+### Run Tests Locally
+```bash
+pip install -r requirements.txt
+PYTHONPATH=. pytest
+```
+
+The tests include:
+- `DataManager` state persistence and model management.
+- `markdown_to_html` conversion and `Ollama` API mocking using `respx`.
+- Intelligent message splitting for large AI responses.
 
 ---
 
