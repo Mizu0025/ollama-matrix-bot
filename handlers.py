@@ -2,6 +2,7 @@ import simplematrixbotlib as botlib
 from config import logger, SYSTEM_INSTRUCTION
 from data_manager import DataManager
 from ollama_client import markdown_to_html, fetch_ollama_models, chat_with_ollama
+from utils import split_text_into_chunks
 
 data = DataManager()
 
@@ -30,22 +31,24 @@ def register_handlers(bot):
 
         # Helper for sending messages
         async def send_formatted(text):
-            try:
-                html = markdown_to_html(text)
-                content = {
-                    "msgtype": "m.text",
-                    "body": text,
-                    "format": "org.matrix.custom.html",
-                    "formatted_body": html
-                }
-                await bot.api.async_client.room_send(
-                    room_id=room.room_id,
-                    message_type="m.room.message",
-                    content=content
-                )
-            except Exception as e:
-                logger.error(f"❌ Failed to send message: {e}")
-                await bot.api.send_text_message(room.room_id, text)
+            chunks = split_text_into_chunks(text)
+            for chunk in chunks:
+                try:
+                    html = markdown_to_html(chunk)
+                    content = {
+                        "msgtype": "m.text",
+                        "body": chunk,
+                        "format": "org.matrix.custom.html",
+                        "formatted_body": html
+                    }
+                    await bot.api.async_client.room_send(
+                        room_id=room.room_id,
+                        message_type="m.room.message",
+                        content=content
+                    )
+                except Exception as e:
+                    logger.error(f"❌ Failed to send message chunk: {e}")
+                    await bot.api.send_text_message(room.room_id, chunk)
 
         # Command Logic
         if command == "model":
