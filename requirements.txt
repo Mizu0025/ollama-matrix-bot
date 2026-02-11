@@ -1,0 +1,3 @@
+simplematrixbotlib
+httpx
+# requests # Included just in case you use it elsewhere, though httpx is preferred for async
