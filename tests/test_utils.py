@@ -1,52 +1,53 @@
 import pytest
 from utils import split_text_into_chunks
 
-def Should_ReturnSingleChunk_WhenTextIsSmallerThanMaxSize():
+def test_single_paragraph_returns_one_chunk():
     # Arrange
-    text = "Small text"
-    max_size = 100
+    text = "This is a single paragraph."
     
     # Act
-    chunks = split_text_into_chunks(text, max_size=max_size)
+    chunks = split_text_into_chunks(text)
     
     # Assert
-    assert chunks == ["Small text"]
+    assert len(chunks) == 1
+    assert chunks[0] == text
 
-def Should_SplitAtNewline_WhenNewlineIsWithinMaxSize():
+def test_two_paragraphs_return_one_chunk_default():
     # Arrange
-    text = "Line 1\nLine 2\nLine 3"
-    max_size = 10 # "Line 1\n" is 7 bytes
+    text = "Graph 1.\n\nGraph 2."
     
     # Act
-    chunks = split_text_into_chunks(text, max_size=max_size)
+    chunks = split_text_into_chunks(text)
     
     # Assert
-    assert chunks == ["Line 1\n", "Line 2\n", "Line 3"]
+    assert len(chunks) == 1
+    assert chunks[0] == text
 
-def Should_ForceSplit_WhenNoNewlineIsWithinMaxSize():
+def test_three_paragraphs_return_two_chunks_default():
     # Arrange
-    text = "Abcdefghij"
-    max_size = 5
+    text = "Graph 1.\n\nGraph 2.\n\nGraph 3."
     
     # Act
-    chunks = split_text_into_chunks(text, max_size=max_size)
+    chunks = split_text_into_chunks(text)
     
     # Assert
-    assert chunks == ["Abcde", "fghij"]
+    assert len(chunks) == 2
+    assert chunks[0] == "Graph 1.\n\nGraph 2."
+    assert chunks[1] == "Graph 3."
 
-def Should_RespectByteLength_WhenHandlingUnicodeCharacters():
+def test_four_paragraphs_return_two_chunks_default():
     # Arrange
-    text = "こんにちは世界" # 21 bytes total
-    max_size = 10 # "こんに" is 9 bytes
+    text = "Graph 1.\n\nGraph 2.\n\nGraph 3.\n\nGraph 4."
     
     # Act
-    chunks = split_text_into_chunks(text, max_size=max_size)
+    chunks = split_text_into_chunks(text)
     
     # Assert
-    assert chunks[0] == "こんに"
-    assert "".join(chunks) == text
+    assert len(chunks) == 2
+    assert chunks[0] == "Graph 1.\n\nGraph 2."
+    assert chunks[1] == "Graph 3.\n\nGraph 4."
 
-def Should_ReturnListWithEmptyString_WhenTextIsEmpty():
+def test_empty_text_returns_empty_list():
     # Arrange
     text = ""
     
@@ -54,4 +55,40 @@ def Should_ReturnListWithEmptyString_WhenTextIsEmpty():
     chunks = split_text_into_chunks(text)
     
     # Assert
-    assert chunks == [""]
+    assert chunks == []
+
+def test_custom_chunk_size():
+    # Arrange
+    text = "G1.\n\nG2.\n\nG3."
+    
+    # Act
+    chunks = split_text_into_chunks(text, paragraphs_per_chunk=1)
+    
+    # Assert
+    assert len(chunks) == 3
+    assert chunks[0] == "G1."
+    assert chunks[1] == "G2."
+    assert chunks[2] == "G3."
+
+def test_handles_multiple_newlines_gracefully():
+    # Arrange
+    # Even if there are extra newlines, split('\n\n') might create empty strings,
+    # which we should probably filter out or handle.
+    # Current impl filters out empty strings.
+    text = "G1.\n\n\n\nG2."
+    
+    # Act
+    # "G1.\n\n\n\nG2.".split('\n\n') -> ["G1.", "", "G2."]
+    # My impl: iterates, skips empty if I added the check.
+    # Let's verify my impl logic in thought.
+    chunks = split_text_into_chunks(text)
+    
+    # Assert
+    # Logic:
+    # "G1." -> added to current_chunk ["G1."]
+    # "" -> skipped (if proper check exists)
+    # "G2." -> added to current_chunk ["G1.", "G2."]
+    # len(current_chunk) == 2 -> append "\n\n".join -> "G1.\n\nG2."
+    assert len(chunks) == 1
+    assert chunks[0] == "G1.\n\nG2."
+
