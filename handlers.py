@@ -1,6 +1,7 @@
 import simplematrixbotlib as botlib
 import nio
 import httpx
+import io
 from config import logger, SYSTEM_INSTRUCTION
 from data_manager import DataManager
 from ollama_client import markdown_to_html, fetch_ollama_models, chat_with_ollama
@@ -14,13 +15,19 @@ def register_handlers(bot):
         # logging
         logger.info(f"--- Event Received from {message.sender} ---")
         
-        # Strict parsing: MUST start with "!" and have NO space after it
         body = getattr(message, 'body', '').strip()
+        # Robust MXC URL extraction for uploaded media
         mxc_url = getattr(message, 'url', None)
-        is_image = mxc_url and mxc_url.startswith("mxc://")
+        if not mxc_url and hasattr(message, 'source'):
+            content = message.source.get('content', {})
+            mxc_url = content.get('url') or content.get('file', {}).get('url')
+        
+        is_media = mxc_url and isinstance(mxc_url, str) and mxc_url.startswith("mxc://")
 
         if not body.startswith("!") or body.startswith("! "):
             return
+
+        logger.info(f"Command detected: {body} (is_media: {is_media})")
             
         if not botlib.MessageMatch(room, message, bot, "!").is_not_from_this_bot():
             return
@@ -90,7 +97,7 @@ def register_handlers(bot):
             return
 
         if command == "avatar":
-            if is_image:
+            if is_media:
                 try:
                     await bot.api.async_client.set_avatar_url(mxc_url)
                     await send_formatted("✅ Avatar updated successfully from uploaded image!")
@@ -120,7 +127,7 @@ def register_handlers(bot):
                             return
 
                         upload_resp = await bot.api.async_client.upload(
-                            image_data, 
+                            io.BytesIO(image_data), 
                             content_type=content_type, 
                             filename="avatar"
                         )
