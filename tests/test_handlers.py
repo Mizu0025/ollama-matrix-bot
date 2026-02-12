@@ -34,7 +34,7 @@ def mock_room():
 @patch("handlers.DataManager")
 @patch("handlers.fetch_ollama_models")
 @patch("handlers.chat_with_ollama")
-async def test_avatar_from_url_success(mock_chat, mock_fetch, mock_data, mock_bot, mock_room):
+async def Should_SetAvatarAndUpload_WhenAvatarFromUrlSucceeds(mock_chat, mock_fetch, mock_data, mock_bot, mock_room):
     # Arrange
     # Capture the handle_message function
     handler = None
@@ -78,7 +78,7 @@ async def test_avatar_from_url_success(mock_chat, mock_fetch, mock_data, mock_bo
     mock_bot.api.async_client.set_avatar_url.assert_called_once_with("mxc://example.com/123")
 
 @patch("handlers.DataManager")
-async def test_avatar_direct_upload_robust_mxc(mock_data, mock_bot, mock_room):
+async def Should_ExtractMxcFromNestedSource_WhenDirectlyUploaded(mock_data, mock_bot, mock_room):
     # Arrange
     handler = None
     def capture_handler(f):
@@ -108,7 +108,7 @@ async def test_avatar_direct_upload_robust_mxc(mock_data, mock_bot, mock_room):
     mock_bot.api.async_client.set_avatar_url.assert_called_once_with("mxc://example.com/uploaded_direct")
 
 @patch("handlers.DataManager")
-async def test_avatar_direct_upload_standard_url(mock_data, mock_bot, mock_room):
+async def Should_ExtractMxcFromStandardUrl_WhenDirectlyUploaded(mock_data, mock_bot, mock_room):
     # Arrange
     handler = None
     def capture_handler(f):
@@ -131,7 +131,7 @@ async def test_avatar_direct_upload_standard_url(mock_data, mock_bot, mock_room)
     mock_bot.api.async_client.set_avatar_url.assert_called_once_with("mxc://example.com/standard_mxc")
 
 @patch("handlers.DataManager")
-async def test_avatar_url_failure_not_image(mock_data, mock_bot, mock_room):
+async def Should_NotUploadAndReportError_WhenUrlIsNotAnImage(mock_data, mock_bot, mock_room):
     # Arrange
     handler = None
     def capture_handler(f):
