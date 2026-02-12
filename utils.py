@@ -1,4 +1,4 @@
-def split_text_into_chunks(text, paragraphs_per_chunk=2):
+def split_text_into_chunks(text, paragraphs_per_chunk=4):
     """
     Splits text into chunks of approximately `paragraphs_per_chunk` paragraphs.
     Preserves the entire text content across chunks.
