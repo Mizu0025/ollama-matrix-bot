@@ -15,6 +15,7 @@ MATRIX_URL = os.getenv("MATRIX_URL")
 MATRIX_ID = os.getenv("MATRIX_ID")
 MATRIX_TOKEN = os.getenv("MATRIX_TOKEN")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434").rstrip("/")
+COMFYUI_URL = os.getenv("COMFYUI_URL", "http://localhost:8000").rstrip("/")
 DATA_FILE = os.getenv("DATA_FILE", "/app/store/bot_data.json")
 SESSION_FILE = os.getenv("SESSION_FILE", "/app/store/session.txt")
 

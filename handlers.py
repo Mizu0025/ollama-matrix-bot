@@ -5,6 +5,7 @@ import io
 from config import logger, SYSTEM_INSTRUCTION
 from data_manager import DataManager
 from ollama_client import markdown_to_html, fetch_ollama_models, chat_with_ollama
+from comfyui_client import ComfyUIClient
 from utils import split_text_into_chunks
 
 data = DataManager()
@@ -88,6 +89,7 @@ def register_handlers(bot):
             await send_formatted(
                 "🤖 **Ollama Bot Help**\n\n"
                 "• `!<prompt>` - Chat with AI\n"
+                "• `!fate <prompt>` - Generate an image\n"
                 "• `!model <name>` - Switch model\n"
                 "• `!models` - List local models\n"
                 "• `!avatar <url>` - Update bot avatar from URL\n"
@@ -143,6 +145,64 @@ def register_handlers(bot):
             else:
                 await send_formatted("❓ Usage: `!avatar <url>` or upload an image with the caption `!avatar`.")
             return
+
+        if command == "fate":
+            prompt = " ".join(args[1:])
+            if not prompt:
+                await send_formatted("❓ Usage: `!fate <prompt>`")
+                return
+
+            await send_formatted(f"🎨 Requesting image generation for: `{prompt}`...")
+            
+            try:
+                comfy_client = ComfyUIClient()
+                
+                # 1. Request generation
+                resp = await comfy_client.request_generation(prompt, message.sender)
+                job_id = resp.get("job_id")
+                queue_pos = resp.get("queue_position", "unknown")
+                
+                if not job_id:
+                    await send_formatted(f"❌ Failed to get job ID from service: `{resp}`")
+                    return
+
+                await send_formatted(f"✅ Job queued! ID: `{job_id}`, Position: {queue_pos}")
+                
+                # 2. Wait for completion
+                await bot.api.async_client.room_typing(room.room_id, True)
+                result = await comfy_client.wait_for_job(job_id)
+                
+                # Assume result contains image URL(s)
+                image_urls = []
+                if isinstance(result, dict):
+                    # Check common response patterns
+                    if "result" in result and isinstance(result["result"], dict) and "images" in result["result"]:
+                        image_urls = result["result"]["images"]
+                    elif "images" in result:
+                        image_urls = result["images"]
+                    elif "url" in result:
+                        image_urls = [result["url"]]
+                
+                if not image_urls:
+                    await send_formatted(f"⚠ Generation completed but no image URL was found in response.")
+                    logger.warning(f"No image URLs in result: {result}")
+                    return
+
+                for img_url in image_urls:
+                    # If the URL is relative, prepend the base URL
+                    full_url = img_url
+                    if img_url.startswith("/"):
+                        full_url = f"{comfy_client.base_url}{img_url}"
+                    
+                    await send_formatted(f"🖼 **Generated Image:** {full_url}")
+
+            except Exception as e:
+                logger.error(f"Error in !fate command: {e}")
+                await send_formatted(f"❌ Error during image generation: {str(e)}")
+            finally:
+                await bot.api.async_client.room_typing(room.room_id, False)
+            return
+
 
         # Standard AI Query
         prompt = " ".join(args)
